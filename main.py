@@ -49,10 +49,9 @@ class Labyrinth:
 
     def __init__(self, move_step):
         self.move_step = move_step
-
-    with open("labyrinth.json", "r") as read_file:
-        labyrinth_from_json = json.load(read_file)
-    labyrinth = labyrinth_from_json['labyrinth']
+        with open("labyrinth.json", "r") as read_file:
+            labyrinth_from_json = json.load(read_file)
+        self.labyrinth = labyrinth_from_json['labyrinth']
 
     def start(self):
         if self.move_step == 0:
@@ -69,18 +68,25 @@ class Labyrinth:
             print("Next step")
             print("---------")
 
-    def game_over(self):
-        self.move_step = 0
+    @staticmethod
+    def game_over():
         print("---------")
         print("Game over")
         print("---------")
 
-    def win(self):
+    @staticmethod
+    def win():
         print("---------")
         print("You win!")
         print("---------")
 
     def is_right_side(self, side):
+        if self._is_wall(side) | self._is_prev(side) | self._is_wrong(side):
+            return False
+        else:
+            return True
+
+    def move_to_side(self, side):
         if self._is_next(side):
             return self.next()
         elif self._is_wall(side) | self._is_prev(side) | self._is_wrong(side):
@@ -121,18 +127,63 @@ class Labyrinth:
             return False
 
 
+class Save:
+
+    def __init__(self):
+        self.saved_state = None
+
+    def get_save(self):
+        try:
+            with open("save.json", "r") as read_file:
+                self.saved_state = json.load(read_file)
+        except json.decoder.JSONDecodeError:
+            self.saved_state = None
+        return self.saved_state
+
+    @staticmethod
+    def set_save(saved_state):
+        with open("save.json", "w") as write_file:
+            return json.dump(saved_state, write_file)
+
+
 if __name__ == '__main__':
     sharick = Dog()
     labyrinth = Labyrinth(move_step=0)
     start_game = True
+    save = Save()
+
+    if save.get_save() is not None:
+        while True:
+            user_ans = input('Хотите загрузить предыдущую игру? Y/N\n')
+            if user_ans == 'Y':
+                labyrinth.move_step = save.get_save()
+                break
+            elif user_ans == 'N':
+                labyrinth.move_step = 0
+                break
 
     while start_game:
+
         labyrinth.start()
+
         print(f"Num of step: {labyrinth.move_step + 1}")
         chosen_side = sharick.move()
-        labyrinth.is_right_side(chosen_side)
+
+        if not labyrinth.is_right_side(chosen_side):
+            break
+
+        labyrinth.move_to_side(chosen_side)
 
         if labyrinth.is_win():
+            break
+
+    while True:
+        user_ans = input('Хотите сохранить прогресс? Y/N\n')
+        if user_ans == 'Y':
+            save.set_save(labyrinth.move_step)
+            break
+        elif user_ans == 'N':
+            save.set_save(None)
             break
 
     # combination for win: 1: right, 2: down, 3: left, 4: down, 5: right, 6: right, 7: right, 8: right, 9: down,
